@@ -1,4 +1,5 @@
 <?php
+
 namespace F3\LazyPDO;
 
 use Serializable;
@@ -12,14 +13,15 @@ use RuntimeException;
  *
  * @version $id$
  * @author Alexey Karapetov <karapetov@gmail.com>
+ * @author Stephen Leavitt <stephen.leavitt@sonyatv.com>
  * @license http://opensource.org/licenses/mit-license.php The MIT License (MIT)
  */
-class LazyPDO extends PDODecorator
-    implements Serializable
+class LazyPDO extends PDODecorator implements Serializable
 {
     private $dsn;
     private $user;
     private $password;
+    private $lazy_options = array();
     private $options = array();
 
     private $pdo = null;
@@ -49,7 +51,18 @@ class LazyPDO extends PDODecorator
     {
         if (null === $this->pdo) {
             $this->pdo = new PDO($this->dsn, $this->user, $this->password, $this->options);
+
+            if (!empty($this->lazy_options)) {
+                foreach($this->lazy_options as $attribute => $value) {
+                    if ($this->pdo->setAttribute($attribute, $value)) {
+                        $this->options[$attribute] = $value;
+                    }
+                }
+
+                $this->lazy_options = array();
+            }
         }
+
         return $this->pdo;
     }
 
@@ -102,10 +115,18 @@ class LazyPDO extends PDODecorator
      */
     public function setAttribute($attribute, $value)
     {
-        if (parent::setAttribute($attribute, $value)) {
-            $this->options[$attribute] = $value;
-            return true;
+        if ($this->pdo instanceof \PDO) {
+            if (parent::setAttribute($attribute, $value)) {
+                $this->options[$attribute] = $value;
+
+                return true;
+            }
+
+            return false;
         }
-        return false;
+
+        $this->lazy_options[$attribute] = $value;
+
+        return true;
     }
 }
