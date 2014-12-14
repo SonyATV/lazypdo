@@ -107,6 +107,21 @@ class LazyPDO extends PDODecorator implements Serializable
     }
 
     /**
+     * getAttribute
+     *
+     * @param int $attribute
+     * @return mixed
+     */
+    public function getAttribute($attribute)
+    {
+        if ($this->pdo instanceof \PDO) {
+            return parent::getAttribute($attribute);
+        }
+
+        return isset($this->lazy_options[$attribute]) ? $this->lazy_options[$attribute] : null;
+    }
+
+    /**
      * setAttribute
      *
      * @param int $attribute
